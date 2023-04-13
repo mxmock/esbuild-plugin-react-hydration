@@ -1,0 +1,47 @@
+{
+  "name": "esbuild-plugin-react-hydration",
+  "version": "0.0.1",
+  "description": "An esbuild plugin to generate react components html and insert it in a main html file",
+  "main": "index.min.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mxmock/esbuild-plugin-react-hydration.git"
+  },
+  "scripts": {
+    "test": "npx babel-node test/esbuild.mjs",
+    "prod": "npx babel-node test/esbuild.prod.mjs"
+  },
+  "keywords": [
+    "esbuild",
+    "plugin",
+    "react",
+    "html",
+    "static",
+    "hydration"
+  ],
+  "author": "Ockode",
+  "license": "MIT",
+  "homepage": "https://github.com/mxmock/esbuild-plugin-react-hydration/blob/main/README.md",
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "files": [
+    "index.min.js"
+  ],
+  "exports": {
+    ".": "./index.min.js"
+  },
+  "devDependencies": {
+    "@reduxjs/toolkit": "^1.9.2",
+    "esbuild": "^0.17.3",
+    "react-redux": "8.0.5"
+  },
+  "dependencies": {
+    "@babel/core": "^7.20.12",
+    "@babel/node": "^7.20.7",
+    "@babel/preset-env": "^7.20.2",
+    "@babel/preset-react": "^7.18.6",
+    "html-minifier": "^4.0.0"
+  }
+}
