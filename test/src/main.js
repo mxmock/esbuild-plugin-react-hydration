@@ -1,4 +1,5 @@
 import React from "react";
+import Dbz from "./components/Dbz";
 import Header from "./components/Header.static";
 import Gallery from "./components/Gallery.static";
 import { hydrateRoot, createRoot } from "react-dom/client";
@@ -8,6 +9,7 @@ const main = () => {
   // inject component by html id - "header"
   injectInHtml("header", Header);
   injectInHtml("gallery", Gallery);
+  injectInHtml("dbz", Dbz, null, false);
 };
 
 const injectInHtml = (id, funcComponent, redux = null, isStatic = true) => {
