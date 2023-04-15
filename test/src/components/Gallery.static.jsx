@@ -7,6 +7,8 @@ const Gallery = ({ data }) => {
       {galleries.cars.map((car) => (
         <li key={car.name}>
           <img
+            decoding="async"
+            loading="lazy"
             src={`${data.ASSETS}/${car.path}`}
             alt={car.name}
           />
