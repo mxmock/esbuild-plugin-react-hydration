@@ -35,13 +35,35 @@ module.exports = (options = {}) => {
     setup: (build) => {
       build.onStart(async () => {
         await removeFile(outDir);
-        pages = await getPages(htmlFrom, htmlOut);
+        pages = await getPages(htmlFrom, htmlOut, assetsOut || assetsFrom);
         if (assetsOut && assetsFrom) await cp(assetsFrom, assetsOut, { recursive: true });
         if (cssOut && cssFrom) await cp(cssFrom, cssOut, { recursive: true });
       });
 
       build.onLoad({ filter: /\.static.jsx$/ }, (args) => {
-        console.log("react hydration onLoad (.static.jsx)");
+        const componentPath = args.path;
+
+        const id = getIdFromFile(componentPath);
+        const attrId = `id="${id}">`;
+        const attrData = `data-${id}=`;
+
+        for (const page of pages) {
+          let { content, path } = page;
+          if (!content.includes(attrId)) continue;
+          const opt = {
+            redux,
+            attrId,
+            content,
+            attrData,
+            componentPath,
+            suffix: args.suffix,
+          };
+          page.content = getUpdatedPages(opt);
+          console.log("Component:", id);
+          console.log("Injected in:", path);
+          console.log("-------------------------------------------");
+          console.log("-------------------------------------------");
+        }
 
         return { loader: "jsx" };
       });
@@ -53,7 +75,6 @@ module.exports = (options = {}) => {
         for (const page of pages) {
           page.content = handleCss(cssPaths, page.path, page.content);
           page.content = handleScripts(jsPaths, page.path, page.content);
-          page.content = handleAssets(assetsOut || assetsFrom, page.path, page.content);
           await writeFile(page.path, page.content);
         }
       });
@@ -71,13 +92,13 @@ const removeFile = async (path) => {
 
 /********************************** Handle paths and pages **********************************/
 
-const getPages = async (htmlFrom, htmlOut) => {
+const getPages = async (htmlFrom, htmlOut, assetsPath) => {
   let pages = [];
   try {
     if (!htmlFrom || !htmlOut) throw new Error(`Must specify html entry & out directory`);
     await cp(htmlFrom, htmlOut, { recursive: true });
     const filesPaths = await getFilesPath(htmlOut, "html");
-    pages = await readPages(filesPaths);
+    pages = await readPages(filesPaths, assetsPath);
   } catch (e) {
     console.error(`getPages - Can't get html outputs paths:`, e.message);
   } finally {
@@ -97,19 +118,20 @@ const getFilesPath = async (dir, ext) => {
   return Array.prototype.concat(...files).filter((p) => p.includes(`.${ext}`));
 };
 
-const readPages = async (filesPaths) => {
+const readPages = async (filesPaths, assetsPath) => {
   let pages = [];
   try {
     const pagesPromises = filesPaths.map(async (filePath) => {
       return new Promise((resolve, reject) => {
         readFile(filePath, "utf8")
           .then((c) => {
-            if (!c) reject(`Can't read file ${filePath}`);
-            const content = minify(c, {
+            if (!c) reject(`readPages - cannot read file at path ${filePath}`);
+            const minified = minify(c, {
               caseSensitive: true,
               collapseWhitespace: true,
               conservativeCollapse: true,
             });
+            const content = handleAssets(assetsPath, filePath, minified);
             resolve({ path: filePath, content });
           })
           .catch((e) => reject(e));
@@ -117,7 +139,7 @@ const readPages = async (filesPaths) => {
     });
     pages = await Promise.all(pagesPromises);
   } catch (e) {
-    console.error(`Can't read files`, e.message);
+    console.error(`readPages - cannot read files`, e.message);
   } finally {
     return pages;
   }
@@ -125,36 +147,45 @@ const readPages = async (filesPaths) => {
 
 /********************************** Replace tags stuff **********************************/
 
-const handleAssets = (assetsPath, htmlPath, content) => {
-  const tag = "{assets}";
-  const assets = assetsPath ? getRelativePath(assetsPath, htmlPath) : ".";
-  return getReplacedContent(content, [assets], tag);
-};
-
 const handleScripts = (jsPaths, htmlPath, content) => {
   const tag = "<!-- {scripts} -->";
   const js = jsPaths.map((p) => getRelativePath(p, htmlPath)).map(createScript);
-  return getReplacedContent(content, js, tag);
+  const html = js.reduce((prev, val) => `${prev}${val}`, "");
+  return replaceTagWithValue(content, tag, html);
 };
 
 const handleCss = (cssPaths, htmlPath, content) => {
   const tag = "<!-- {styles} -->";
   const css = cssPaths.map((p) => getRelativePath(p, htmlPath)).map(createLink);
-  return getReplacedContent(content, css, tag);
+  const html = css.reduce((prev, val) => `${prev}${val}`, "");
+  return replaceTagWithValue(content, tag, html);
 };
 
-const getReplacedContent = (content, htmlTags, tag) => {
+const handleAssets = (assetsPath, htmlPath, content) => {
+  const tag = "{assets}";
+  const path = assetsPath ? getRelativePath(assetsPath, htmlPath) : ".";
+  return replaceAssets(content, path, tag);
+};
+
+const replaceAssets = (content, path, tag) => {
+  let updated = content;
+  while (updated.includes(tag)) {
+    updated = replaceTagWithValue(updated, tag, path);
+  }
+  return updated;
+};
+
+const replaceTagWithValue = (content, tag, value) => {
   const startIndex = content.indexOf(tag);
   if (startIndex < 0) return content;
   const endIndex = startIndex + tag.length;
   const beforeTag = content.substring(0, startIndex);
   const afterTag = content.substring(endIndex);
-  const html = htmlTags.reduce((prev, val) => `${prev}${val}`, "");
-  return `${beforeTag}${html}${afterTag}`;
+  return `${beforeTag}${value}${afterTag}`;
 };
 
-const createScript = (script) => `<script defer async src="${script}"></script>`;
 const createLink = (link) => `<link rel="stylesheet" href="${link}">`;
+const createScript = (script) => `<script defer async src="${script}"></script>`;
 
 /********************************** Relative paths stuff **********************************/
 
@@ -179,4 +210,58 @@ const getRelativeDots = (pathLength) => {
     relativePath += "../";
   }
   return relativePath.slice(0, -1);
+};
+
+/********************************** Inject react html stuff **********************************/
+
+const getIdFromFile = (filePath) => {
+  const fileName = path.basename(filePath, path.extname(filePath));
+  const name = fileName.substring(0, fileName.indexOf(".static"));
+  return `${name.slice(0, 1).toLowerCase()}${name.slice(1)}`;
+};
+
+const getUpdatedPages = (opt) => {
+  const { content, attrData, attrId, componentPath, suffix, redux } = opt;
+  const idLocation = content.indexOf(attrId);
+  if (idLocation < 0) return content;
+  const data = getComponentData(content, idLocation, attrData);
+  const html = getComponentHtml(componentPath, data, suffix, redux);
+  return getInjectedHtml(html, content, idLocation, attrId.length);
+};
+
+const getComponentData = (content, idLocation, attrData) => {
+  if (!content.includes(attrData)) return {};
+  const dataStartAt = content.indexOf(attrData) + attrData.length + 1;
+  const dataEndAt = idLocation - 2;
+  const data = content.substring(dataStartAt, dataEndAt);
+  try {
+    const parsed = JSON.parse(data);
+    console.log(`${attrData}`, parsed);
+    return parsed;
+  } catch (e) {
+    console.error(`getComponentData - cannot parse ${data} from html:`, e.message);
+    return {};
+  }
+};
+
+const getComponentHtml = (path, data, suffix, redux) => {
+  let Component = require(path);
+  if (Component.default) Component = Component.default;
+  const reactComponent = React.createElement(Component, { data });
+  try {
+    if (!suffix.includes("provider")) return renderToString(reactComponent);
+    if (!redux.store || !redux.Provider)
+      throw new Error(`You must provide a store and Provider for ${path}`);
+    const { store, Provider } = redux;
+    return renderToString(React.createElement(Provider, { store }, reactComponent));
+  } catch (e) {
+    console.error(`getComponenHtml - cannot renderToString:`, e.message);
+    return "";
+  }
+};
+
+const getInjectedHtml = (component, page, idLocation, idSize) => {
+  const beforeId = page.substring(0, idLocation + idSize);
+  const afterId = page.substring(idLocation + idSize);
+  return `${beforeId}${component}${afterId}`;
 };
