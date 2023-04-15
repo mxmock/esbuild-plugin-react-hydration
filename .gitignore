@@ -117,3 +117,4 @@ docker-compose.yml
 # Auto generated
 dev
 prod
+*.data.json

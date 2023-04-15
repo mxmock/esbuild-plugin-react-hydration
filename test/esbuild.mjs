@@ -19,6 +19,7 @@ const ctx = await esbuild.context({
       htmlFrom: "/test/src/pages",
       // assetsOut: "/assets",
       assetsFrom: "/test/src/files",
+      galleries: ["cars", "images/dbz"],
     }),
   ],
   outdir: "test/dev/js",

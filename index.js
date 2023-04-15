@@ -27,6 +27,8 @@ module.exports = (options = {}) => {
   const htmlOut = setPath(options.htmlOut, outDir);
   const assetsOut = setPath(options.assetsOut, outDir);
 
+  const galleries = !!options.galleries?.length ? options.galleries : null;
+
   const redux = options.redux || { store: null, Provider: null };
   let pages = [];
 
@@ -35,9 +37,12 @@ module.exports = (options = {}) => {
     setup: (build) => {
       build.onStart(async () => {
         await removeFile(outDir);
-        pages = await getPages(htmlFrom, htmlOut, assetsOut || assetsFrom);
+        const assetsPath = assetsOut || assetsFrom;
+        pages = await getPages(htmlFrom, htmlOut, assetsPath);
+
         if (assetsOut && assetsFrom) await cp(assetsFrom, assetsOut, { recursive: true });
         if (cssOut && cssFrom) await cp(cssFrom, cssOut, { recursive: true });
+        if (assetsPath && galleries) await setGalleriesJson(galleries, assetsPath);
       });
 
       build.onLoad({ filter: /\.static.jsx$/ }, (args) => {
@@ -264,4 +269,46 @@ const getInjectedHtml = (component, page, idLocation, idSize) => {
   const beforeId = page.substring(0, idLocation + idSize);
   const afterId = page.substring(idLocation + idSize);
   return `${beforeId}${component}${afterId}`;
+};
+
+/********************************** Galleries stuff **********************************/
+
+const setGalleriesJson = async (galleries, assetsPath) => {
+  const galleryObj = await galleries.reduce(async (prevPromise, current) => {
+    const prev = await prevPromise;
+    const gallery = await getGallery(current, assetsPath);
+    return { ...prev, [current]: gallery };
+  }, Promise.resolve({}));
+
+  await writeData(assetsPath, "galleries", JSON.stringify(galleryObj));
+};
+
+const getGallery = async (gallery, assetsPath) => {
+  try {
+    const filesPaths = await readdir(`${assetsPath}/${gallery}`);
+    return filesPaths.map((path) => ({
+      name: getFileNameFromPath(path),
+      path: `${gallery}/${path}`,
+    }));
+  } catch (e) {
+    console.error(`getGallery - cannot get files from ${gallery}:`, e.message);
+    return [];
+  }
+};
+
+const getFileNameFromPath = (path) => {
+  const filename = path.split("/").find((el, i, arr) => i === arr.length - 1);
+  return filename
+    .split(".")
+    .filter((el, i, arr) => i !== arr.length - 1)
+    .join(".");
+};
+
+const writeData = async (saveIn, fileName, data) => {
+  try {
+    const dest = `${saveIn}/${fileName || "galleries"}.data.json`;
+    await writeFile(dest, data);
+  } catch (e) {
+    console.error(`writeData - cannot write data ${fileName}:`, e.message);
+  }
 };
