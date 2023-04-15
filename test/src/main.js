@@ -1,11 +1,13 @@
 import React from "react";
 import Header from "./components/Header.static";
+import Gallery from "./components/Gallery.static";
 import { hydrateRoot, createRoot } from "react-dom/client";
 
 const main = () => {
   console.log(`environement: ${process?.env?.NODE_ENV ? process.env.NODE_ENV : "development"}`);
   // inject component by html id - "header"
   injectInHtml("header", Header);
+  injectInHtml("gallery", Gallery);
 };
 
 const injectInHtml = (id, funcComponent, redux = null, isStatic = true) => {
