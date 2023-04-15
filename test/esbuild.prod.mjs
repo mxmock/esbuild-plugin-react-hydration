@@ -4,26 +4,35 @@ import store from "./src/redux/store.js";
 import { writeFile } from "node:fs/promises";
 import reactHydrationPlugin from "../index.min.js";
 
-const OUT_DIR = "test/prod";
-const PAGES_FROM = "test/src/pages";
-const JS_FROM = "test/src/main.js";
+const SRC = "test/src";
+const OUT = "test/prod";
 const REDUX = { store, Provider };
 
 const TIME_LOG = `Build time`;
 
 console.time(TIME_LOG);
 const result = await esbuild.build({
-  entryPoints: [JS_FROM],
+  entryPoints: [`${SRC}/main.js`],
   bundle: true,
   minify: true,
   plugins: [
     reactHydrationPlugin({
-      outDir: `${OUT_DIR}/pages`,
-      pages: PAGES_FROM,
       redux: REDUX,
+
+      cssFrom: `/${SRC}/styles`,
+      htmlFrom: `/${SRC}/pages`,
+      assetsFrom: `/${SRC}/files`,
+
+      outDir: `/${OUT}`,
+      jsOut: "/js", // => /${OUT}/js => /test/prod/js
+      htmlOut: "/", // => /${OUT}/   => /test/prod/
+      cssOut: "/css",
+      assetsOut: "/assets",
+
+      galleries: ["cars", "images/dbz"],
     }),
   ],
-  outdir: `${OUT_DIR}/js`,
+  outdir: `${OUT}/js`, // must be the same as jsOut option
   metafile: true,
   legalComments: "none",
   pure: ["console"],

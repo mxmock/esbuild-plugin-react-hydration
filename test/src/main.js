@@ -5,7 +5,7 @@ import Gallery from "./components/Gallery.static";
 import { hydrateRoot, createRoot } from "react-dom/client";
 
 const main = () => {
-  console.log(`environement: ${process?.env?.NODE_ENV ? process.env.NODE_ENV : "development"}`);
+  console.log(`environment: ${process?.env?.NODE_ENV ? process.env.NODE_ENV : "not set"}`);
   // inject component by html id - "header"
   injectInHtml("header", Header);
   injectInHtml("gallery", Gallery);
@@ -41,7 +41,7 @@ const getHtmlData = (domEl, id) => {
 };
 
 const handleRoot = (domEl, component, isStatic = true) => {
-  if (isStatic) {
+  if (isStatic && process?.env?.NODE_ENV === "production") {
     // hydrating dom if component has been rendered before - static
     console.log(`Hydrating root ${domEl.id}...`);
     hydrateRoot(domEl, component);
