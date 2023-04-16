@@ -1,6 +1,6 @@
 {
   "name": "esbuild-plugin-react-hydration",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "An esbuild plugin to generate react components html and insert it in a main html file",
   "main": "index.min.js",
   "repository": {
