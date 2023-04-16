@@ -120,7 +120,12 @@ const getFilesPath = async (dir, ext) => {
       return dirent.isDirectory() ? getFilesPath(res, ext) : res;
     })
   );
-  return Array.prototype.concat(...files).filter((p) => p.includes(`.${ext}`));
+  return Array.prototype.concat(...files).filter((p) => isExt(p, ext));
+};
+
+const isExt = (name, ext) => {
+  const arr = name.split(".");
+  return arr[arr.length - 1] === ext;
 };
 
 const readPages = async (filesPaths, assetsPath) => {

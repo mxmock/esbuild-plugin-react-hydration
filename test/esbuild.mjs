@@ -10,6 +10,7 @@ const REDUX = { store, Provider };
 const ctx = await esbuild.context({
   entryPoints: [`${SRC}/bootstrap/bootstrap.js`, `${SRC}/main.js`],
   bundle: true,
+  sourcemap: true,
   plugins: [
     reactHydrationPlugin({
       redux: REDUX,
