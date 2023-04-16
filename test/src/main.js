@@ -1,7 +1,10 @@
 import React from "react";
+import store from "./redux/store";
 import Dbz from "./components/Dbz";
+import { Provider } from "react-redux";
 import Header from "./components/Header.static";
 import Gallery from "./components/Gallery.static";
+import Counter from "./components/Counter.static#provider";
 import { hydrateRoot, createRoot } from "react-dom/client";
 
 const main = () => {
@@ -10,6 +13,7 @@ const main = () => {
   injectInHtml("header", Header);
   injectInHtml("gallery", Gallery);
   injectInHtml("dbz", Dbz, null, false);
+  injectInHtml("counter", Counter, { Provider, store });
 };
 
 const injectInHtml = (id, funcComponent, redux = null, isStatic = true) => {

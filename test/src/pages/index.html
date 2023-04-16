@@ -18,11 +18,19 @@
 
   <body>
     <header
-      data-header='{"ASSETS":"{assets}"}'
+      data-header='{"ASSETS":"{assets}","showCounter":true}'
       id="header"
     ></header>
 
+    <div
+      style="margin: 40px 0"
+      id="counter"
+    ></div>
+
     <img
+      decoding="async"
+      loading="lazy"
+      style="max-height: 600px"
       src="{assets}/export-bg.png"
       alt="logo"
     />
