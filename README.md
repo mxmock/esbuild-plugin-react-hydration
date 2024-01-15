@@ -1,6 +1,7 @@
 # esbuild-plugin-react-hydration
 
 An esbuild plugin to generate react components html and insert it in an existing html file.
+// https://github.com/evanw/esbuild/issues/334
 
 ## Features
 
